@@ -37,7 +37,8 @@ android {
         release {
             debuggable false
             minifyEnabled true
-            signingConfig signingConfigs.release
+            // unsigned unless signing env is set: `just release` signs with apksigner 34 (F-Droid needs it)
+            if (System.getenv("RELEASE_KEYSTORE_PASSWORD")) signingConfig signingConfigs.release
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
         debug {
@@ -79,4 +80,12 @@ dependencies {
     testImplementation libs.kotlinx.coroutines.test
     testImplementation 'junit:junit:4.13.2'
     testImplementation 'org.json:json:20240303' // real org.json; android.jar only has stubs
+}
+
+// F-Droid reproducibility: baseline.prof is not deterministic across machines
+// https://f-droid.org/docs/Reproducible_Builds/
+tasks.whenTaskAdded { task ->
+    if (task.name.contains("ArtProfile")) {
+        task.enabled = false
+    }
 }

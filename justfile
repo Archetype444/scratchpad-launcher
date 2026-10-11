@@ -46,12 +46,14 @@ release version="":
     git commit -m "Bump to $version"
     git push
     source ~/keys/scratchpad-launcher/credentials.env
-    export RELEASE_KEYSTORE_PATH=~/keys/scratchpad-launcher/release.keystore
-    export RELEASE_KEYSTORE_PASSWORD="$STOREPASS"
-    export RELEASE_KEY_ALIAS="$KEY_ALIAS"
-    export RELEASE_KEY_PASSWORD="$KEYPASS"
-    # clean: stale incremental Kotlin output made v1.1.13 non-reproducible for F-Droid (#6)
+    export STOREPASS KEYPASS KEY_ALIAS
+    # unsigned build, then sign with apksigner 34: build-tools >=35 signatures can't be copied by F-Droid (apksigcopier)
     ./gradlew clean assembleRelease
+    bt=${ANDROID_HOME:-$(sed -n 's/^sdk.dir=//p' local.properties)}/build-tools/34.0.0
+    $bt/apksigner sign --ks ~/keys/scratchpad-launcher/release.keystore --ks-key-alias "$KEY_ALIAS" \
+        --ks-pass env:STOREPASS --key-pass env:KEYPASS \
+        --out app/build/outputs/apk/release/app-release.apk app/build/outputs/apk/release/app-release-unsigned.apk
+    $bt/apksigner verify app/build/outputs/apk/release/app-release.apk
     git tag "v$version"
     git push origin "v$version"
     mkdir -p release-artifacts
