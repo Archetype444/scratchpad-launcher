@@ -47,10 +47,10 @@ release version="":
     git push
     source ~/keys/scratchpad-launcher/credentials.env
     export STOREPASS KEYPASS KEY_ALIAS
-    # unsigned build, then sign with apksigner 34: build-tools >=35 signatures can't be copied by F-Droid (apksigcopier)
+    # unsigned build, then sign; --alignment-preserved keeps F-Droid (apksigcopier) able to copy the signature with build-tools >=35
     ./gradlew clean assembleRelease
-    bt=${ANDROID_HOME:-$(sed -n 's/^sdk.dir=//p' local.properties)}/build-tools/34.0.0
-    $bt/apksigner sign --ks ~/keys/scratchpad-launcher/release.keystore --ks-key-alias "$KEY_ALIAS" \
+    bt=${ANDROID_HOME:-$(sed -n 's/^sdk.dir=//p' local.properties)}/build-tools/35.0.0
+    $bt/apksigner sign --alignment-preserved --ks ~/keys/scratchpad-launcher/release.keystore --ks-key-alias "$KEY_ALIAS" \
         --ks-pass env:STOREPASS --key-pass env:KEYPASS \
         --out app/build/outputs/apk/release/app-release.apk app/build/outputs/apk/release/app-release-unsigned.apk
     $bt/apksigner verify app/build/outputs/apk/release/app-release.apk
