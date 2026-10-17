@@ -233,7 +233,8 @@ class AppDrawerFragment : BaseFragment() {
             privateSpaceSettingsListener = {
                 viewModel.openPrivateSpaceSettings()
                 findNavController().popBackStack(R.id.mainFragment, false)
-            }
+            },
+            showIcons = prefs.showAppIcons,
         )
 
         linearLayoutManager = object : LinearLayoutManager(requireContext()) {

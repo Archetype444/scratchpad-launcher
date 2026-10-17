@@ -10,7 +10,6 @@ import android.content.res.Resources
 import android.os.BatteryManager
 import android.graphics.Color
 import android.graphics.Typeface
-import android.graphics.drawable.Drawable
 import android.os.Build
 import android.os.Bundle
 import android.text.Editable
@@ -67,6 +66,7 @@ import app.olauncher.helper.openCalendar
 import app.olauncher.helper.openCameraApp
 import app.olauncher.helper.openDialerApp
 import app.olauncher.helper.openSearch
+import app.olauncher.helper.setLeadingIcon
 import app.olauncher.helper.showToast
 import app.olauncher.listener.OnSwipeTouchListener
 import app.olauncher.listener.ViewSwipeTouchListener
@@ -629,7 +629,7 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
         // Get user handle for the app/shortcut
         val userHandle = getUserHandleFromString(requireContext(), userString)
         val launcherApps = requireContext().getSystemService(Context.LAUNCHER_APPS_SERVICE) as LauncherApps
-        setHomeAppIcon(textView, null)
+        textView.setLeadingIcon(null)
 
         // If it's a shortcut, verify it still exists
         if (isShortcut) {
@@ -650,7 +650,7 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
                 val shortcut = shortcuts?.firstOrNull { it.id == shortcutId }
                 if (shortcut != null) {
                     textView.text = appName
-                    if (prefs.showAppIcons) setHomeAppIcon(textView, launcherApps.getShortcutBadgedIconDrawable(shortcut, resources.displayMetrics.densityDpi))
+                    if (prefs.showAppIcons) textView.setLeadingIcon(launcherApps.getShortcutBadgedIconDrawable(shortcut, resources.displayMetrics.densityDpi))
                     return true
                 }
                 textView.text = ""
@@ -666,7 +666,7 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
         if (isPackageInstalled(requireContext(), packageName, userString)) {
             textView.text = appName
             // ponytail: icons load on the main thread each resume; fine for <=8 apps, cache if it ever stutters.
-            if (prefs.showAppIcons) setHomeAppIcon(textView, runCatching { launcherApps.getActivityList(packageName, userHandle).firstOrNull()?.getBadgedIcon(0) }.getOrNull())
+            if (prefs.showAppIcons) textView.setLeadingIcon(runCatching { launcherApps.getActivityList(packageName, userHandle).firstOrNull()?.getBadgedIcon(0) }.getOrNull())
             return true
         }
         textView.text = ""
@@ -699,7 +699,7 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
                 slot.isVisible = app != null
                 slot.text = app?.label
                 slot.alpha = RECENT_APP_ALPHA
-                setHomeAppIcon(slot, icon)
+                slot.setLeadingIcon(icon)
             }
         }
     }
@@ -707,13 +707,6 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
     private fun launchRecentApp(index: Int) {
         val app = recentApps.getOrNull(index) ?: return
         launchApp(app.label.toString(), app.componentName.packageName, app.componentName.className, app.user.toString())
-    }
-
-    /** Launcher icon before the label, sized to the text; null clears it. */
-    private fun setHomeAppIcon(textView: TextView, icon: Drawable?) {
-        val size = (textView.textSize * 1.2f).toInt()
-        textView.setCompoundDrawablesRelative(icon?.mutate()?.apply { setBounds(0, 0, size, size) }, null, null, null)
-        textView.compoundDrawablePadding = (textView.textSize * 0.5f).toInt()
     }
 
     private fun hideHomeApps() {

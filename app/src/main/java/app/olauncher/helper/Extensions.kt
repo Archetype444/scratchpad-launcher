@@ -11,6 +11,7 @@ import android.content.Intent
 import android.content.pm.LauncherApps
 import android.content.pm.PackageManager
 import android.content.res.Resources
+import android.graphics.drawable.Drawable
 import android.net.Uri
 import android.os.Build
 import android.os.UserHandle
@@ -19,6 +20,7 @@ import android.telephony.TelephonyManager
 import android.view.View
 import android.view.WindowManager
 import android.view.inputmethod.InputMethodManager
+import android.widget.TextView
 import androidx.annotation.RequiresApi
 import app.olauncher.BuildConfig
 import app.olauncher.R
@@ -170,4 +172,11 @@ fun Long.hasBeenMinutes(minutes: Int): Boolean =
 
 fun Int.dpToPx(): Int {
     return (this * Resources.getSystem().displayMetrics.density).toInt()
+}
+
+/** Launcher icon before the label, sized to the text; null clears it. */
+fun TextView.setLeadingIcon(icon: Drawable?) {
+    val size = (textSize * 1.2f).toInt()
+    setCompoundDrawablesRelative(icon?.mutate()?.apply { setBounds(0, 0, size, size) }, null, null, null)
+    compoundDrawablePadding = (textSize * 0.5f).toInt()
 }

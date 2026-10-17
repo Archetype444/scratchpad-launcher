@@ -2,6 +2,7 @@ package app.olauncher.ui
 
 import android.content.Context
 import android.content.pm.LauncherApps
+import android.graphics.drawable.Drawable
 import android.os.UserHandle
 import android.text.Editable
 import android.text.TextWatcher
@@ -22,6 +23,7 @@ import app.olauncher.databinding.AdapterAppDrawerBinding
 import app.olauncher.databinding.AdapterPrivateSpaceHeaderBinding
 import app.olauncher.helper.hideKeyboard
 import app.olauncher.helper.isSystemApp
+import app.olauncher.helper.setLeadingIcon
 import app.olauncher.helper.showKeyboard
 import java.text.Normalizer
 
@@ -35,6 +37,7 @@ class AppDrawerAdapter(
     private val appRenameListener: (AppModel, String) -> Unit,
     private val privateSpaceToggleListener: () -> Unit = {},
     private val privateSpaceSettingsListener: () -> Unit = {},
+    private val showIcons: Boolean = false,
 ) : ListAdapter<AppModel, RecyclerView.ViewHolder>(DIFF_CALLBACK), Filterable {
 
     companion object {
@@ -66,6 +69,8 @@ class AppDrawerAdapter(
     private val separatorsRegex = Regex("[-_+,.`'\\s\\p{Z}]")
     private val appFilter = createAppFilter()
     private val myUserHandle = android.os.Process.myUserHandle()
+    // ponytail: icons load on the main thread once per app while scrolling; move to a background loader if it stutters.
+    private val icons = HashMap<String, Drawable?>()
 
     var appsList: MutableList<AppModel> = mutableListOf()
     var appFilteredList: MutableList<AppModel> = mutableListOf()
@@ -115,6 +120,7 @@ class AppDrawerAdapter(
                     appLabelGravity,
                     myUserHandle,
                     appModel,
+                    if (showIcons) iconFor(holder.itemView.context, appModel) else null,
                     appClickListener,
                     appDeleteListener,
                     appInfoListener,
@@ -126,6 +132,15 @@ class AppDrawerAdapter(
             e.printStackTrace()
         }
     }
+
+    private fun iconFor(context: Context, app: AppModel): Drawable? =
+        icons.getOrPut("${app.appPackage}|${(app as? AppModel.App)?.activityClassName}|${app.user}") {
+            val activities = runCatching {
+                context.getSystemService(LauncherApps::class.java).getActivityList(app.appPackage, app.user)
+            }.getOrNull().orEmpty()
+            (activities.firstOrNull { it.componentName.className == (app as? AppModel.App)?.activityClassName } ?: activities.firstOrNull())
+                ?.getBadgedIcon(0)
+        }
 
     override fun getFilter(): Filter = this.appFilter
 
@@ -228,6 +243,7 @@ class AppDrawerAdapter(
             appLabelGravity: Int,
             myUserHandle: UserHandle,
             appModel: AppModel,
+            icon: Drawable?,
             clickListener: (AppModel) -> Unit,
             appDeleteListener: (AppModel) -> Unit,
             appInfoListener: (AppModel) -> Unit,
@@ -244,6 +260,7 @@ class AppDrawerAdapter(
                 if (appModel.isNew) append(" ✦")
             }
             appTitle.gravity = appLabelGravity
+            appTitle.setLeadingIcon(icon)
             otherProfileIndicator.isVisible = appModel.user != myUserHandle
 
             appTitle.setOnClickListener { clickListener(appModel) }
