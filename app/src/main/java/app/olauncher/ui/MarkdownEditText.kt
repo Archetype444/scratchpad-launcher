@@ -27,6 +27,8 @@ class MarkdownEditText @JvmOverloads constructor(
     var onPinch: ((scale: Float, done: Boolean) -> Unit)? = null
     private var pinch = 1f
     private var pinching = false
+    /** The touch went down on a checkbox or link: its long-press must not open settings (or select text). */
+    private var downOnTapTarget = false
     private val scaleDetector = ScaleGestureDetector(context, object : ScaleGestureDetector.SimpleOnScaleGestureListener() {
         override fun onScaleBegin(detector: ScaleGestureDetector): Boolean { pinch = 1f; return true }
         override fun onScale(detector: ScaleGestureDetector): Boolean {
@@ -50,27 +52,20 @@ class MarkdownEditText @JvmOverloads constructor(
             }
             if (pinching) return true
         }
+        if (event.actionMasked == MotionEvent.ACTION_DOWN) downOnTapTarget = checkboxAt(event) != null || linkAt(event) != null
         if (event.action == MotionEvent.ACTION_UP) {
-            val editable = text
-            val currentLayout = layout
-            if (editable != null && currentLayout != null) {
-                val offset = offsetForTouch(currentLayout, event.x, event.y)
-                val span = editable.getSpans(offset, offset, CheckboxSpan::class.java)
-                    .firstOrNull { editable.getSpanStart(it) <= offset && offset <= editable.getSpanEnd(it) }
-                if (span != null) {
-                    val toggleIndex = editable.getSpanStart(span) + 1
-                    editable.replace(toggleIndex, toggleIndex + 1, if (span.checked) " " else "x")
-                    // super never sees this UP, so the long-press scheduled on DOWN would fire (opens settings).
-                    cancelLongPress()
-                    return true
-                }
-                val link = if (isFocused) null else editable.getSpans(offset, offset, LinkSpan::class.java)
-                    .firstOrNull { editable.getSpanStart(it) <= offset && offset < editable.getSpanEnd(it) }
-                if (link != null) {
-                    openLink(link.url)
-                    cancelLongPress()
-                    return true
-                }
+            checkboxAt(event)?.let { span ->
+                val editable = text!!
+                val toggleIndex = editable.getSpanStart(span) + 1
+                editable.replace(toggleIndex, toggleIndex + 1, if (span.checked) " " else "x")
+                // super never sees this UP, so the long-press scheduled on DOWN would fire (opens settings).
+                cancelLongPress()
+                return true
+            }
+            linkAt(event)?.let {
+                openLink(it.url)
+                cancelLongPress()
+                return true
             }
         }
         if (event.action == MotionEvent.ACTION_UP && !isFocused) {
@@ -82,6 +77,24 @@ class MarkdownEditText @JvmOverloads constructor(
             return handled
         }
         return super.onTouchEvent(event)
+    }
+
+    // A slow tap can outlast the long-press timeout before UP arrives; never treat it as a long-press.
+    override fun performLongClick(): Boolean = downOnTapTarget || super.performLongClick()
+
+    private fun checkboxAt(event: MotionEvent): CheckboxSpan? {
+        val editable = text ?: return null
+        val offset = layout?.let { offsetForTouch(it, event.x, event.y) } ?: return null
+        return editable.getSpans(offset, offset, CheckboxSpan::class.java)
+            .firstOrNull { editable.getSpanStart(it) <= offset && offset <= editable.getSpanEnd(it) }
+    }
+
+    private fun linkAt(event: MotionEvent): LinkSpan? {
+        if (isFocused) return null
+        val editable = text ?: return null
+        val offset = layout?.let { offsetForTouch(it, event.x, event.y) } ?: return null
+        return editable.getSpans(offset, offset, LinkSpan::class.java)
+            .firstOrNull { editable.getSpanStart(it) <= offset && offset < editable.getSpanEnd(it) }
     }
 
     private fun openLink(url: String) {
