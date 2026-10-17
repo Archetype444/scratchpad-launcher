@@ -159,7 +159,8 @@ class SettingsFragment : BaseFragment(), View.OnClickListener, View.OnLongClickL
     override fun onClick(view: View) {
         when (view.id) {
             R.id.hiddenApps -> showHiddenApps()
-            R.id.screenTimeOnOff -> {
+            // Row is hidden below Q (populateScreenTimeOnOff)
+            R.id.screenTimeOnOff -> if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 if (requireContext().appUsagePermissionGranted()) prefs.screenTimeVisible = !prefs.screenTimeVisible
                 else viewModel.showDialog.postValue(Constants.Dialog.DIGITAL_WELLBEING)
                 populateScreenTimeOnOff()
