@@ -1,6 +1,8 @@
 package app.olauncher.ui
 
 import android.app.admin.DevicePolicyManager
+import android.appwidget.AppWidgetHost
+import android.appwidget.AppWidgetManager
 import android.content.Context
 import android.content.Intent
 import android.content.pm.LauncherActivityInfo
@@ -84,6 +86,7 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
     private lateinit var viewModel: MainViewModel
     private lateinit var deviceManager: DevicePolicyManager
     private lateinit var scratchpadDebouncer: Debouncer
+    private val widgetHost by lazy { AppWidgetHost(requireContext().applicationContext, Constants.WIDGET_HOST_ID) }
     private var syncPollJob: Job? = null
     private var recentApps: List<LauncherActivityInfo> = emptyList()
     private val recentsOn get() = Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && prefs.recentAppsColumn != RECENTS_OFF
@@ -113,6 +116,26 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
         initSwipeTouchListener()
         initClickListeners()
         applyHomeTextColor()
+        populateWidget()
+    }
+
+    override fun onStart() {
+        super.onStart()
+        widgetHost.startListening()
+    }
+
+    override fun onStop() {
+        super.onStop()
+        widgetHost.stopListening()
+    }
+
+    private fun populateWidget() {
+        val context = requireContext()
+        val info = AppWidgetManager.getInstance(context).getAppWidgetInfo(prefs.homeWidgetId)
+        binding.widgetFrame.isVisible = info != null
+        if (info == null) return
+        val widget = widgetHost.createView(context.applicationContext, prefs.homeWidgetId, info)
+        binding.widgetFrame.addView(widget, ViewGroup.LayoutParams.MATCH_PARENT, info.minHeight)
     }
 
     /** Only tablets rotate (phones are locked to portrait): note on the left, clock and apps bottom right. */
@@ -128,7 +151,7 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
     private fun applyHomeTextColor() {
         val color = prefs.homeTextColor.takeIf { it != 0 } ?: return
         fun walk(view: View) {
-            if (view === binding.formatToolbar) return
+            if (view === binding.formatToolbar || view === binding.widgetFrame) return
             if (view is TextView) {
                 view.setTextColor(color)
                 view.setHintTextColor(ColorUtils.setAlphaComponent(color, 0x80))

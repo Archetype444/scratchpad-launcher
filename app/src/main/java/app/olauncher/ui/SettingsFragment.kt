@@ -1,5 +1,8 @@
 package app.olauncher.ui
 
+import android.appwidget.AppWidgetManager
+import android.appwidget.AppWidgetHost
+import android.app.Activity
 import android.app.admin.DevicePolicyManager
 import android.content.ComponentName
 import android.content.Context
@@ -75,6 +78,7 @@ class SettingsFragment : BaseFragment(), View.OnClickListener, View.OnLongClickL
         populateScratchpadOptions()
         populateTextColour()
         binding.appIcons.isChecked = prefs.showAppIcons
+        populateWidget()
         populateRecentApps()
         populateScreenTimeOnOff()
         populateLockSettings()
@@ -198,6 +202,9 @@ class SettingsFragment : BaseFragment(), View.OnClickListener, View.OnLongClickL
                     startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS))
                 }
             }
+            R.id.homeWidget -> pick(R.string.widget, listOf(getString(R.string.off) to false, getString(R.string.widget_choose) to true), null) {
+                if (it == true) chooseWidget() else setWidget(AppWidgetManager.INVALID_APPWIDGET_ID)
+            }
             R.id.appIcons -> {
                 prefs.showAppIcons = !prefs.showAppIcons
                 binding.appIcons.isChecked = prefs.showAppIcons
@@ -304,7 +311,7 @@ class SettingsFragment : BaseFragment(), View.OnClickListener, View.OnLongClickL
             binding.autoShowKeyboard, binding.scratchpadFont, binding.scratchpadAccent, binding.formatToolbarToggle,
             binding.toggleLock, binding.homeAppsNum, binding.screenTimeOnOff, binding.alignment, binding.statusBar,
             binding.dateTime, binding.swipeLeftApp, binding.swipeRightApp, binding.swipeDownAction, binding.appThemeText,
-            binding.textSizeValue, binding.scratchpadSizeValue, binding.scratchpadLineSpacing, binding.textColour, binding.appIcons,
+            binding.textSizeValue, binding.scratchpadSizeValue, binding.scratchpadLineSpacing, binding.textColour, binding.appIcons, binding.homeWidget,
             binding.recentApps,
         ).forEach { v -> (v.parent as View).setOnClickListener { onClick(v) } }
         listOf(binding.alignment, binding.swipeLeftApp, binding.swipeRightApp, binding.toggleLock)
@@ -464,6 +471,53 @@ class SettingsFragment : BaseFragment(), View.OnClickListener, View.OnLongClickL
         } catch (e: Exception) {
             e.printStackTrace()
         }
+    }
+
+    private val widgetHost by lazy { AppWidgetHost(requireContext().applicationContext, Constants.WIDGET_HOST_ID) }
+    private var pendingWidgetId = AppWidgetManager.INVALID_APPWIDGET_ID
+
+    // The system picker binds the widget for us, so no BIND_APPWIDGET permission is needed.
+    private val pickWidget = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        val id = pendingWidgetId
+        if (result.resultCode != Activity.RESULT_OK) return@registerForActivityResult widgetHost.deleteAppWidgetId(id)
+        val configure = AppWidgetManager.getInstance(requireContext()).getAppWidgetInfo(id)?.configure
+            ?: return@registerForActivityResult setWidget(id)
+        // Posted past the activity's onResume, which clears isPickingDocument
+        binding.root.post {
+            try {
+                viewModel.isPickingDocument = true
+                configureWidget.launch(Intent(AppWidgetManager.ACTION_APPWIDGET_CONFIGURE).setComponent(configure).putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id))
+            } catch (e: Exception) { // non-exported config activity: use the widget's defaults
+                setWidget(id)
+            }
+        }
+    }
+
+    private val configureWidget = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        if (result.resultCode == Activity.RESULT_OK) setWidget(pendingWidgetId) else widgetHost.deleteAppWidgetId(pendingWidgetId)
+    }
+
+    private fun chooseWidget() {
+        pendingWidgetId = widgetHost.allocateAppWidgetId()
+        try {
+            viewModel.isPickingDocument = true // stay in settings while the picker is open
+            pickWidget.launch(Intent(AppWidgetManager.ACTION_APPWIDGET_PICK).putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, pendingWidgetId))
+        } catch (e: Exception) {
+            widgetHost.deleteAppWidgetId(pendingWidgetId)
+            requireContext().showToast(getString(R.string.widget_unavailable))
+        }
+    }
+
+    /** Replaces the home widget; INVALID_APPWIDGET_ID removes it. */
+    private fun setWidget(id: Int) {
+        if (prefs.homeWidgetId != AppWidgetManager.INVALID_APPWIDGET_ID) widgetHost.deleteAppWidgetId(prefs.homeWidgetId)
+        prefs.homeWidgetId = id
+        populateWidget()
+    }
+
+    private fun populateWidget() {
+        val info = AppWidgetManager.getInstance(requireContext()).getAppWidgetInfo(prefs.homeWidgetId)
+        binding.homeWidget.text = info?.loadLabel(requireContext().packageManager) ?: getString(R.string.off)
     }
 
     private fun updateHomeAppsNum(num: Int) {

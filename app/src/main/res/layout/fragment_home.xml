@@ -70,6 +70,13 @@
             android:paddingTop="8dp"
             android:paddingBottom="56dp">
 
+            <!-- Optional widget (Settings > Widget), right under the note -->
+            <FrameLayout
+                android:id="@+id/widgetFrame"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:visibility="gone" />
+
             <!-- Clock and calendar: pinned right below scratchpad -->
             <LinearLayout
                 android:id="@+id/dateTimeLayout"

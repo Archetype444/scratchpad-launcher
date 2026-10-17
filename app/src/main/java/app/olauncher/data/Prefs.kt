@@ -52,6 +52,7 @@ class Prefs(context: Context) {
     private val SCRATCHPAD_ACCENT = "SCRATCHPAD_ACCENT"
     private val HOME_TEXT_COLOR = "HOME_TEXT_COLOR"
     private val SHOW_APP_ICONS = "SHOW_APP_ICONS"
+    private val HOME_WIDGET_ID = "HOME_WIDGET_ID"
     private val SCREEN_TIME_VISIBLE = "SCREEN_TIME_VISIBLE"
     private val RECENT_APPS_COLUMN = "RECENT_APPS_COLUMN"
     private val FORMAT_TOOLBAR = "FORMAT_TOOLBAR"
@@ -311,6 +312,11 @@ class Prefs(context: Context) {
     var showAppIcons: Boolean
         get() = prefs.getBoolean(SHOW_APP_ICONS, false)
         set(value) = prefs.edit { putBoolean(SHOW_APP_ICONS, value).apply() }
+
+    /** Optional widget under the note; 0 (AppWidgetManager.INVALID_APPWIDGET_ID) when off. */
+    var homeWidgetId: Int
+        get() = prefs.getInt(HOME_WIDGET_ID, 0)
+        set(value) = prefs.edit { putInt(HOME_WIDGET_ID, value).apply() }
 
     /** Which home grid column shows recently used apps: [RECENTS_OFF], [RECENTS_LEFT] or [RECENTS_RIGHT]. */
     var recentAppsColumn: Int

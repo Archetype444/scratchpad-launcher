@@ -74,6 +74,18 @@
 
                     <TextView
                         style="@style/SettingsTitle"
+                        android:text="@string/widget" />
+
+                    <TextView
+                        android:id="@+id/homeWidget"
+                        style="@style/SettingsSummary"
+                        android:text="@string/off" />
+                </LinearLayout>
+
+                <LinearLayout style="@style/SettingsRow">
+
+                    <TextView
+                        style="@style/SettingsTitle"
                         android:text="@string/show_date_time" />
 
                     <TextView

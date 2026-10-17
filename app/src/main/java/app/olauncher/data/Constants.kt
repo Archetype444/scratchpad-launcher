@@ -2,6 +2,8 @@ package app.olauncher.data
 
 object Constants {
 
+    const val WIDGET_HOST_ID = 1024
+
     object Key {
         const val FLAG = "flag"
         const val RENAME = "rename"
