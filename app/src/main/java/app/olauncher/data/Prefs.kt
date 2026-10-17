@@ -47,6 +47,7 @@ class Prefs(context: Context) {
     private val SWIPE_DOWN_ACTION = "SWIPE_DOWN_ACTION"
     private val TEXT_SIZE_SCALE = "TEXT_SIZE_SCALE"
     private val SCRATCHPAD_TEXT_SCALE = "SCRATCHPAD_TEXT_SCALE"
+    private val SCRATCHPAD_LINE_SPACING = "SCRATCHPAD_LINE_SPACING"
     private val SCRATCHPAD_FONT = "SCRATCHPAD_FONT"
     private val SCRATCHPAD_ACCENT = "SCRATCHPAD_ACCENT"
     private val HOME_TEXT_COLOR = "HOME_TEXT_COLOR"
@@ -323,6 +324,11 @@ class Prefs(context: Context) {
     var scratchpadTextScale: Float
         get() = prefs.getFloat(SCRATCHPAD_TEXT_SCALE, 1.0f)
         set(value) = prefs.edit { putFloat(SCRATCHPAD_TEXT_SCALE, value).apply() }
+
+    /** Line height multiplier of the note. */
+    var scratchpadLineSpacing: Float
+        get() = prefs.getFloat(SCRATCHPAD_LINE_SPACING, 1.3f)
+        set(value) = prefs.edit { putFloat(SCRATCHPAD_LINE_SPACING, value).apply() }
 
     var proMessageShown: Boolean
         get() = prefs.getBoolean(PRO_MESSAGE_SHOWN, false)

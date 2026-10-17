@@ -237,6 +237,10 @@ class SettingsFragment : BaseFragment(), View.OnClickListener, View.OnLongClickL
                 prefs.scratchpadTextScale = it
                 populateScratchpadSize()
             }
+            R.id.scratchpadLineSpacing -> pick(R.string.scratchpad_line_height, (10..20).map { String.format("%.1f", it / 10f) to it / 10f }, prefs.scratchpadLineSpacing) {
+                prefs.scratchpadLineSpacing = it
+                populateScratchpadSize()
+            }
 
             R.id.tvGestures -> binding.flSwipeDown.visibility = View.VISIBLE
 
@@ -300,7 +304,7 @@ class SettingsFragment : BaseFragment(), View.OnClickListener, View.OnLongClickL
             binding.autoShowKeyboard, binding.scratchpadFont, binding.scratchpadAccent, binding.formatToolbarToggle,
             binding.toggleLock, binding.homeAppsNum, binding.screenTimeOnOff, binding.alignment, binding.statusBar,
             binding.dateTime, binding.swipeLeftApp, binding.swipeRightApp, binding.swipeDownAction, binding.appThemeText,
-            binding.textSizeValue, binding.scratchpadSizeValue, binding.textColour, binding.appIcons,
+            binding.textSizeValue, binding.scratchpadSizeValue, binding.scratchpadLineSpacing, binding.textColour, binding.appIcons,
             binding.recentApps,
         ).forEach { v -> (v.parent as View).setOnClickListener { onClick(v) } }
         listOf(binding.alignment, binding.swipeLeftApp, binding.swipeRightApp, binding.toggleLock)
@@ -501,6 +505,7 @@ class SettingsFragment : BaseFragment(), View.OnClickListener, View.OnLongClickL
     private fun populateScratchpadSize() {
         val formatted = String.format("%.1f", prefs.scratchpadTextScale)
         binding.scratchpadSizeValue.text = formatted
+        binding.scratchpadLineSpacing.text = String.format("%.1f", prefs.scratchpadLineSpacing)
     }
 
     private fun populateTextSize() {

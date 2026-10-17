@@ -495,6 +495,7 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
             else -> base
         }
         pad.letterSpacing = if (small) 0.02f else 0f
+        pad.setLineSpacing(0f, prefs.scratchpadLineSpacing)
         // Halo scales with the glyphs (3px at the default 17sp on xxhdpi) instead of a fixed blur.
         pad.setShadowLayer(pad.textSize * 0.06f, 0f, 0f, pad.shadowColor)
     }

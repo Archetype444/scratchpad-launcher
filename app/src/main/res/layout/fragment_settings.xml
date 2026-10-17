@@ -265,6 +265,18 @@
                         tools:text="1.0" />
                 </LinearLayout>
 
+                <LinearLayout style="@style/SettingsRow">
+
+                    <TextView
+                        style="@style/SettingsTitle"
+                        android:text="@string/scratchpad_line_height" />
+
+                    <TextView
+                        android:id="@+id/scratchpadLineSpacing"
+                        style="@style/SettingsSummary"
+                        tools:text="1.3" />
+                </LinearLayout>
+
                 <TextView
                     android:id="@+id/syncFolder"
                     style="@style/SettingsAction"

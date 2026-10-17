@@ -9,4 +9,5 @@
     <string name="left_column">Left column</string>
     <string name="right_column">Right column</string>
     <string name="recent_apps_permission">Allow usage access to show recent apps</string>
+    <string name="scratchpad_line_height">Scratchpad line height</string>
 </resources>
