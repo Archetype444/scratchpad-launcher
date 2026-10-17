@@ -9,22 +9,25 @@
     android:focusableInTouchMode="true"
     tools:context=".ui.HomeFragment">
 
+<!-- Placeholder layout for locking screen-->
+<FrameLayout
+    android:id="@+id/lock"
+    android:layout_width="match_parent"
+    android:layout_height="1dp"
+    android:contentDescription="@string/lock_layout_description" />
+
+<!-- Stacked in portrait; side by side in landscape (tablets), see HomeFragment.applyLandscape -->
 <LinearLayout
+    android:id="@+id/homeColumns"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:animateLayoutChanges="true"
     android:clipChildren="false"
     android:orientation="vertical">
 
-    <!-- Placeholder layout for locking screen-->
-    <FrameLayout
-        android:id="@+id/lock"
-        android:layout_width="match_parent"
-        android:layout_height="1dp"
-        android:contentDescription="@string/lock_layout_description" />
-
     <!-- Top half: scratchpad -->
     <FrameLayout
+        android:id="@+id/scratchpadFrame"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1">

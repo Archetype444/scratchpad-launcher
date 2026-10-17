@@ -21,6 +21,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.view.WindowInsets
 import android.widget.FrameLayout
+import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
 import androidx.annotation.RequiresApi
@@ -105,12 +106,22 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
         deviceManager = context?.getSystemService(Context.DEVICE_POLICY_SERVICE) as DevicePolicyManager
 
         scratchpadDebouncer = Debouncer(viewLifecycleOwner.lifecycleScope, 300L)
+        applyLandscape()
         initScratchpad()
         initObservers()
         setHomeAlignment(prefs.homeAlignment)
         initSwipeTouchListener()
         initClickListeners()
         applyHomeTextColor()
+    }
+
+    /** Only tablets rotate (phones are locked to portrait): note on the left, clock and apps bottom right. */
+    private fun applyLandscape() {
+        if (resources.configuration.orientation != Configuration.ORIENTATION_LANDSCAPE) return
+        binding.homeColumns.orientation = LinearLayout.HORIZONTAL
+        binding.scratchpadFrame.layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f)
+        binding.homeControls.layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f)
+        (binding.homeAppsLayout.layoutParams as FrameLayout.LayoutParams).gravity = Gravity.BOTTOM
     }
 
     /** Custom text colour over every home label except the format toolbar, which follows the keyboard. */
@@ -133,7 +144,7 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
         viewModel.isOlauncherDefault()
         ScratchpadSync.readIfChanged(requireContext(), prefs)?.let {
             prefs.scratchpadText = it
-            binding.scratchpad?.setText(it)
+            binding.scratchpad.setText(it)
         }
         if (prefs.showStatusBar) showStatusBar()
         else hideStatusBar()
@@ -142,10 +153,10 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
         syncPollJob = viewLifecycleOwner.lifecycleScope.launch {
             while (isActive) {
                 delay(3000)
-                if (binding.scratchpad?.isFocused == true) continue
+                if (binding.scratchpad.isFocused) continue
                 ScratchpadSync.readIfChanged(requireContext(), prefs)?.let {
                     prefs.scratchpadText = it
-                    binding.scratchpad?.setText(it)
+                    binding.scratchpad.setText(it)
                 }
             }
         }
@@ -321,28 +332,28 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
 
     private fun initScratchpad() {
         applyScratchpadTypography(prefs.scratchpadTextScale)
-        binding.scratchpad?.onPinch = { scale, done ->
+        binding.scratchpad.onPinch = { scale, done ->
             val target = (prefs.scratchpadTextScale * scale).coerceIn(0.5f, 2.0f)
             if (done) {
                 prefs.scratchpadTextScale = Math.round(target * 10f) / 10f
                 applyScratchpadTypography(prefs.scratchpadTextScale)
             } else applyScratchpadTypography(target)
         }
-        binding.scratchpad?.setText(prefs.scratchpadText)
-        binding.scratchpad?.text?.let { styleScratchpadMarkdown(it) }
+        binding.scratchpad.setText(prefs.scratchpadText)
+        binding.scratchpad.text?.let { styleScratchpadMarkdown(it) }
         var typedNewline = -1
-        binding.scratchpad?.addTextChangedListener(
+        binding.scratchpad.addTextChangedListener(
             onTextChanged = { s, start, before, count ->
                 typedNewline = if (count == 1 && before == 0 && s?.getOrNull(start) == '\n') start else -1
             },
             afterTextChanged = { editable ->
-                if (editable != null && typedNewline >= 0 && binding.scratchpad?.isFocused == true) {
+                if (editable != null && typedNewline >= 0 && binding.scratchpad.isFocused) {
                     val newline = typedNewline
                     typedNewline = -1
                     // Re-enters this listener, which saves and restyles the continued text.
                     MarkdownFormatter.continueList(editable.toString(), newline)?.let { edit ->
                         editable.replace(edit.start, edit.end, edit.replacement)
-                        binding.scratchpad?.setSelection(edit.selectionStart)
+                        binding.scratchpad.setSelection(edit.selectionStart)
                         return@addTextChangedListener
                     }
                 }
@@ -352,7 +363,7 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
             },
         )
         // While editing, long-press belongs to text selection/paste.
-        binding.scratchpad?.setOnLongClickListener { pad ->
+        binding.scratchpad.setOnLongClickListener { pad ->
             if (pad.isFocused) return@setOnLongClickListener false
             prefs.firstSettingsOpen = false
             findNavController().navigate(R.id.action_mainFragment_to_settingsFragment)
@@ -363,15 +374,15 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
         var scrollOnFocus = 0
         var scrolledWhileEditing = false
         var textOnFocus = 0
-        binding.scratchpad?.setOnFocusChangeListener { v, hasFocus ->
+        binding.scratchpad.setOnFocusChangeListener { v, hasFocus ->
             if (hasFocus) {
                 scrollOnFocus = v.scrollY
                 scrolledWhileEditing = false
-                textOnFocus = binding.scratchpad?.text.toString().hashCode()
+                textOnFocus = binding.scratchpad.text.toString().hashCode()
             }
-            binding.scratchpad?.text?.let { styleScratchpadMarkdown(it) }
+            binding.scratchpad.text?.let { styleScratchpadMarkdown(it) }
         }
-        binding.scratchpad?.let { pad ->
+        binding.scratchpad.let { pad ->
             // A drag that scrolled the note while editing is the user's own scroll: keep it on leaving
             var scrollOnDown = 0
             pad.setOnTouchListener { _, event ->
@@ -414,8 +425,8 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
 
     /** Opt-in toolbar: sits above the keyboard, and the bottom half steps aside so the note keeps room. */
     private fun initFormatToolbar() {
-        val scratchpad = binding.scratchpad ?: return
-        val toolbar = binding.formatToolbar ?: return
+        val scratchpad = binding.scratchpad
+        val toolbar = binding.formatToolbar
         if (!prefs.formatToolbar) return
         // Follow the system light/dark setting (like the keyboard), not the launcher's own theme mode
         val systemDark = Resources.getSystem().configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK == Configuration.UI_MODE_NIGHT_YES
@@ -445,8 +456,8 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
             follow(insets.getInsets(WindowInsetsCompat.Type.ime()).bottom)
             insets
         }
-        binding.formatDone?.setOnClickListener { scratchpad.hideKeyboard() }
-        binding.formatClearDone?.setOnClickListener {
+        binding.formatDone.setOnClickListener { scratchpad.hideKeyboard() }
+        binding.formatClearDone.setOnClickListener {
             val editable = scratchpad.text ?: return@setOnClickListener
             val cleared = MarkdownFormatter.clearDone(editable.toString())
             if (cleared == editable.toString()) return@setOnClickListener
@@ -484,7 +495,7 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
      * Below 1.0 the note gets medium weight and a touch of tracking, so small text keeps its strokes.
      */
     private fun applyScratchpadTypography(scale: Float) {
-        val pad = binding.scratchpad ?: return
+        val pad = binding.scratchpad
         val small = scale < 1f
         pad.setTextSize(TypedValue.COMPLEX_UNIT_SP, 17f * scale / prefs.textSizeScale)
         val base = Typeface.create(prefs.scratchpadFont, Typeface.NORMAL)
@@ -504,7 +515,7 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
         val accentColor = prefs.homeTextColor.takeIf { it != 0 } ?: requireContext().getColorFromAttr(R.attr.primaryColor)
         val dimColor = if (prefs.homeTextColor != 0) ColorUtils.setAlphaComponent(accentColor, 0x80)
         else requireContext().getColorFromAttr(R.attr.primaryColorTrans50)
-        MarkdownStyler.apply(editable, dimColor, accentColor, prefs.scratchpadAccent, binding.scratchpad?.isFocused == true)
+        MarkdownStyler.apply(editable, dimColor, accentColor, prefs.scratchpadAccent, binding.scratchpad.isFocused)
     }
 
     private fun setHomeAlignment(horizontalGravity: Int = prefs.homeAlignment) {
@@ -675,7 +686,7 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
 
     /** Slots 5–8 list recently used apps; "left column" just moves the pinned column to the right. */
     private fun populateRecentApps() {
-        binding.homeAppsGrid?.let { grid ->
+        binding.homeAppsGrid.let { grid ->
             val pinnedColumn = binding.homeApp1.parent as View
             val index = if (prefs.recentAppsColumn == RECENTS_LEFT) 1 else 0
             if (grid.indexOfChild(pinnedColumn) != index) {
@@ -1004,7 +1015,7 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
         super.onPause()
         syncPollJob?.cancel()
         scratchpadDebouncer.cancel()
-        binding.scratchpad?.text?.toString()?.let {
+        binding.scratchpad.text?.toString()?.let {
             prefs.scratchpadText = it
             ScratchpadSync.write(requireContext(), prefs, it)
         }
