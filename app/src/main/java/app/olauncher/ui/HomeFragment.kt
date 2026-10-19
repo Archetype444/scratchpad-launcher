@@ -37,6 +37,7 @@ import androidx.core.view.WindowInsetsAnimationCompat
 import androidx.core.view.children
 import androidx.core.view.updatePadding
 import androidx.core.view.setPadding
+import androidx.core.view.doOnLayout
 import androidx.core.widget.addTextChangedListener
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
@@ -135,7 +136,20 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
         binding.widgetFrame.isVisible = info != null
         if (info == null) return
         val widget = widgetHost.createView(context.applicationContext, prefs.homeWidgetId, info)
-        binding.widgetFrame.addView(widget, ViewGroup.LayoutParams.MATCH_PARENT, info.minHeight)
+        // Give it the height of the home-screen rows it asks for, not its bare minimum (which looks squashed).
+        // ponytail: fixed 100dp row, launcher cells vary ~90-120dp; measure a real grid if widgets look off.
+        val rows = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && info.targetCellHeight > 0) info.targetCellHeight
+        else (info.minHeight / resources.displayMetrics.density + 30).toInt() / 70
+        val height = maxOf(info.minHeight, (rows.coerceAtLeast(1) * 100).dpToPx())
+        binding.widgetFrame.addView(widget, ViewGroup.LayoutParams.MATCH_PARENT, height)
+        // Widgets lay out for the size the host reports (dp); unreported, they shrink to their minimum width.
+        widget.doOnLayout {
+            val density = resources.displayMetrics.density
+            val w = (it.width / density).toInt()
+            val h = (it.height / density).toInt()
+            @Suppress("DEPRECATION")
+            widget.updateAppWidgetSize(null, w, h, w, h)
+        }
     }
 
     /** Only tablets rotate (phones are locked to portrait): note on the left, clock and apps bottom right. */
