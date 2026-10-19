@@ -46,9 +46,7 @@ class MarkdownEditText @JvmOverloads constructor(
             if (!pinching && event.pointerCount > 1) {
                 // Second finger: cancel whatever the first one started (cursor, selection, long-press).
                 pinching = true
-                val cancel = MotionEvent.obtain(event).apply { action = MotionEvent.ACTION_CANCEL }
-                super.onTouchEvent(cancel)
-                cancel.recycle()
+                cancelTouch(event)
             }
             if (pinching) return true
         }
@@ -58,13 +56,14 @@ class MarkdownEditText @JvmOverloads constructor(
                 val editable = text!!
                 val toggleIndex = editable.getSpanStart(span) + 1
                 editable.replace(toggleIndex, toggleIndex + 1, if (span.checked) " " else "x")
-                // super never sees this UP, so the long-press scheduled on DOWN would fire (opens settings).
-                cancelLongPress()
+                // super never sees this UP: cancel the long-press it scheduled on DOWN (opens settings) and its
+                // pressed state (a pressed EditText draws its cursor even unfocused).
+                cancelTouch(event)
                 return true
             }
             linkAt(event)?.let {
                 openLink(it.url)
-                cancelLongPress()
+                cancelTouch(event)
                 return true
             }
         }
@@ -77,6 +76,12 @@ class MarkdownEditText @JvmOverloads constructor(
             return handled
         }
         return super.onTouchEvent(event)
+    }
+
+    private fun cancelTouch(event: MotionEvent) {
+        val cancel = MotionEvent.obtain(event).apply { action = MotionEvent.ACTION_CANCEL }
+        super.onTouchEvent(cancel)
+        cancel.recycle()
     }
 
     // A slow tap can outlast the long-press timeout before UP arrives; never treat it as a long-press.
