@@ -82,11 +82,19 @@ class MarkdownEditText @JvmOverloads constructor(
     // A slow tap can outlast the long-press timeout before UP arrives; never treat it as a long-press.
     override fun performLongClick(): Boolean = downOnTapTarget || super.performLongClick()
 
+    // By drawn position, not text offset: the hidden zero-width "- " before the box would swallow taps on its left half.
+    // Half a box of slack on each side for fingers.
     private fun checkboxAt(event: MotionEvent): CheckboxSpan? {
         val editable = text ?: return null
-        val offset = layout?.let { offsetForTouch(it, event.x, event.y) } ?: return null
-        return editable.getSpans(offset, offset, CheckboxSpan::class.java)
-            .firstOrNull { editable.getSpanStart(it) <= offset && offset <= editable.getSpanEnd(it) }
+        val currentLayout = layout ?: return null
+        val x = event.x - totalPaddingLeft + scrollX
+        val line = currentLayout.getLineForVertical((event.y - totalPaddingTop + scrollY).toInt())
+        return editable.getSpans(currentLayout.getLineStart(line), currentLayout.getLineEnd(line), CheckboxSpan::class.java).firstOrNull {
+            val start = currentLayout.getPrimaryHorizontal(editable.getSpanStart(it))
+            val end = currentLayout.getPrimaryHorizontal(editable.getSpanEnd(it))
+            val slack = (end - start) / 2
+            x in start - slack..end + slack
+        }
     }
 
     private fun linkAt(event: MotionEvent): LinkSpan? {
