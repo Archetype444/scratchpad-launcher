@@ -1,0 +1,10 @@
+- fix(home): widget fills the width at its natural height
+- fix(scratchpad): no stray cursor after ticking a checkbox
+- fix(scratchpad): checkbox taps register across the whole box
+- fix(settings): guard screen time toggle to API 29 (lint NewApi)
+- feat(home): optional widget under the note
+- feat(home): scratchpad in landscape on tablets, note beside the apps
+- feat(drawer): app icons in the app list and search when App icons is on
+- feat(settings): scratchpad line height
+- fix(scratchpad): holding a checkbox or link never opens settings
+- build: sign with apksigner 35 --alignment-preserved
