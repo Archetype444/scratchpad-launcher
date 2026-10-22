@@ -214,7 +214,7 @@ class SettingsFragment : BaseFragment(), View.OnClickListener, View.OnLongClickL
                 prefs.formatToolbar = !prefs.formatToolbar
                 populateScratchpadOptions()
             }
-            R.id.homeAppsNum -> pick(R.string.apps_on_home_screen, (0..8).map { "$it" to it }, prefs.homeAppsNum) { updateHomeAppsNum(it) }
+            R.id.homeAppsNum -> pick(R.string.apps_on_home_screen, (0..Constants.MAX_HOME_APPS).map { "$it" to it }, prefs.homeAppsNum) { updateHomeAppsNum(it) }
             R.id.alignment -> pick(
                 R.string.home_layout_alignment,
                 listOf(getString(R.string.left) to Gravity.START, getString(R.string.center) to Gravity.CENTER, getString(R.string.right) to Gravity.END),

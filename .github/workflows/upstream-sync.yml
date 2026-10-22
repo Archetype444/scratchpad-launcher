@@ -1,0 +1,82 @@
+name: Validate and sync upstream
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: '23 5 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: upstream-sync
+  cancel-in-progress: false
+
+jobs:
+  validate-and-sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Prepare Android SDK
+        run: |
+          echo "sdk.dir=$ANDROID_HOME" > local.properties
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" 'platforms;android-35' 'build-tools;35.0.0'
+
+      - name: Preserve the layout guard
+        run: cp scripts/check-fork-layout.py "$RUNNER_TEMP/check-fork-layout.py"
+
+      - name: Merge upstream updates, retaining our changes in overlapping hunks
+        if: github.event_name != 'push'
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git remote add upstream https://github.com/mstcgalis/scratchpad-launcher.git
+          git fetch --no-tags upstream main
+          # Unlike the "ours" merge strategy, -X ours still takes upstream changes
+          # throughout the tree; only overlapping edits favor this fork.
+          git merge --no-ff --no-commit -X ours upstream/main
+
+      - name: Verify the 15-app customization
+        run: |
+          python - "$RUNNER_TEMP/check-fork-layout.py" "$GITHUB_WORKSPACE" <<'PY'
+          import importlib.util
+          import sys
+          from pathlib import Path
+          spec = importlib.util.spec_from_file_location('fork_guard', sys.argv[1])
+          module = importlib.util.module_from_spec(spec)
+          spec.loader.exec_module(module)
+          module.check(Path(sys.argv[2]))
+          PY
+
+      - name: Build, unit tests and Android lint
+        run: bash gradlew assembleDebug testDebugUnitTest lintDebug --no-daemon
+
+      - name: Publish only validated updates
+        if: github.event_name != 'push'
+        run: |
+          if git rev-parse -q --verify MERGE_HEAD >/dev/null; then
+            git commit -m 'Sync upstream while preserving the 15-app layout'
+            git push origin HEAD:main
+          elif [ "$(( $(date +%s) - $(git log -1 --format=%ct) ))" -ge 3456000 ]; then
+            # GitHub pauses schedules after 60 days of inactivity. Keep this
+            # explicitly requested sync active even during quiet upstream periods.
+            git commit --allow-empty -m 'Keep upstream synchronization active'
+            git push origin HEAD:main
+          fi
+
+      - name: Explain a blocked sync
+        if: failure()
+        run: |
+          echo '### Update not published' >> "$GITHUB_STEP_SUMMARY"
+          echo 'The merge, layout guard, build, tests or lint failed. The current main branch and 15-app customization have been left intact. Review this run before retrying.' >> "$GITHUB_STEP_SUMMARY"

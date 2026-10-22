@@ -70,6 +70,22 @@ object Constants {
     const val FLAG_SET_HOME_APP_7 = 7
     const val FLAG_SET_HOME_APP_8 = 8
 
+    // New picker flags avoid the existing gesture/clock flags (11–15).
+    const val MAX_HOME_APPS = 15
+    const val HOME_APP_COLUMNS = 3
+    const val HOME_APP_ROWS = 5
+
+    fun homeAppFlag(position: Int): Int {
+        require(position in 1..MAX_HOME_APPS)
+        return if (position <= 8) position else position + 100
+    }
+
+    fun homeAppPosition(flag: Int): Int? = when (flag) {
+        in 1..8 -> flag
+        in 109..115 -> flag - 100
+        else -> null
+    }
+
     const val FLAG_SET_SWIPE_LEFT_APP = 11
     const val FLAG_SET_SWIPE_RIGHT_APP = 12
     const val FLAG_SET_CLOCK_APP = 13

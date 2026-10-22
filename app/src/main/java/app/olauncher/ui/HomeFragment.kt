@@ -52,6 +52,7 @@ import app.olauncher.data.RECENTS_LEFT
 import app.olauncher.data.RECENTS_OFF
 import app.olauncher.helper.RecentApps
 import app.olauncher.databinding.FragmentHomeBinding
+import app.olauncher.helper.HomeGridSizing
 import app.olauncher.helper.ClockAppearance
 import app.olauncher.helper.MarkdownAction
 import app.olauncher.helper.MarkdownFormatter
@@ -94,6 +95,12 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
 
     private var _binding: FragmentHomeBinding? = null
     private val binding get() = _binding!!
+
+    private val homeAppViews get() = listOf(
+        binding.homeApp1, binding.homeApp2, binding.homeApp3, binding.homeApp4, binding.homeApp5,
+        binding.homeApp6, binding.homeApp7, binding.homeApp8, binding.homeApp9, binding.homeApp10,
+        binding.homeApp11, binding.homeApp12, binding.homeApp13, binding.homeApp14, binding.homeApp15,
+    )
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentHomeBinding.inflate(inflater, container, false)
@@ -248,15 +255,12 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
     override fun onLongClick(view: View): Boolean {
         // Recent slots aren't pinnable.
         if (recentsOn && (view.tag?.toString()?.toIntOrNull() ?: 0) > 4) return true
+        val position = view.tag?.toString()?.toIntOrNull()
+        if (position != null && position in 1..Constants.MAX_HOME_APPS) {
+            showAppList(Constants.homeAppFlag(position), prefs.getAppName(position).isNotEmpty(), true)
+            return true
+        }
         when (view.id) {
-            R.id.homeApp1 -> showAppList(Constants.FLAG_SET_HOME_APP_1, prefs.appName1.isNotEmpty(), true)
-            R.id.homeApp2 -> showAppList(Constants.FLAG_SET_HOME_APP_2, prefs.appName2.isNotEmpty(), true)
-            R.id.homeApp3 -> showAppList(Constants.FLAG_SET_HOME_APP_3, prefs.appName3.isNotEmpty(), true)
-            R.id.homeApp4 -> showAppList(Constants.FLAG_SET_HOME_APP_4, prefs.appName4.isNotEmpty(), true)
-            R.id.homeApp5 -> showAppList(Constants.FLAG_SET_HOME_APP_5, prefs.appName5.isNotEmpty(), true)
-            R.id.homeApp6 -> showAppList(Constants.FLAG_SET_HOME_APP_6, prefs.appName6.isNotEmpty(), true)
-            R.id.homeApp7 -> showAppList(Constants.FLAG_SET_HOME_APP_7, prefs.appName7.isNotEmpty(), true)
-            R.id.homeApp8 -> showAppList(Constants.FLAG_SET_HOME_APP_8, prefs.appName8.isNotEmpty(), true)
             R.id.clock -> {
                 showAppList(Constants.FLAG_SET_CLOCK_APP)
                 prefs.clockAppPackage = ""
@@ -325,14 +329,7 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
     private fun initSwipeTouchListener() {
         val context = requireContext()
         binding.mainLayout.setOnTouchListener(getSwipeGestureListener(context))
-        binding.homeApp1.setOnTouchListener(getViewSwipeTouchListener(context, binding.homeApp1))
-        binding.homeApp2.setOnTouchListener(getViewSwipeTouchListener(context, binding.homeApp2))
-        binding.homeApp3.setOnTouchListener(getViewSwipeTouchListener(context, binding.homeApp3))
-        binding.homeApp4.setOnTouchListener(getViewSwipeTouchListener(context, binding.homeApp4))
-        binding.homeApp5.setOnTouchListener(getViewSwipeTouchListener(context, binding.homeApp5))
-        binding.homeApp6.setOnTouchListener(getViewSwipeTouchListener(context, binding.homeApp6))
-        binding.homeApp7.setOnTouchListener(getViewSwipeTouchListener(context, binding.homeApp7))
-        binding.homeApp8.setOnTouchListener(getViewSwipeTouchListener(context, binding.homeApp8))
+        homeAppViews.forEach { it.setOnTouchListener(getViewSwipeTouchListener(context, it)) }
     }
 
     private fun initClickListeners() {
@@ -349,22 +346,10 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
         binding.tvScreenTime.setOnLongClickListener(this)
 
         // These fire only on d-pad/keyboard events; touch is consumed by ViewSwipeTouchListener
-        binding.homeApp1.setOnClickListener(this)
-        binding.homeApp2.setOnClickListener(this)
-        binding.homeApp3.setOnClickListener(this)
-        binding.homeApp4.setOnClickListener(this)
-        binding.homeApp5.setOnClickListener(this)
-        binding.homeApp6.setOnClickListener(this)
-        binding.homeApp7.setOnClickListener(this)
-        binding.homeApp8.setOnClickListener(this)
-        binding.homeApp1.setOnLongClickListener(this)
-        binding.homeApp2.setOnLongClickListener(this)
-        binding.homeApp3.setOnLongClickListener(this)
-        binding.homeApp4.setOnLongClickListener(this)
-        binding.homeApp5.setOnLongClickListener(this)
-        binding.homeApp6.setOnLongClickListener(this)
-        binding.homeApp7.setOnLongClickListener(this)
-        binding.homeApp8.setOnLongClickListener(this)
+        homeAppViews.forEach {
+            it.setOnClickListener(this)
+            it.setOnLongClickListener(this)
+        }
     }
 
     private fun initScratchpad() {
@@ -560,14 +545,7 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
         binding.homeAppsLayout.gravity = horizontalGravity
         binding.homeAppsGridContainer.gravity = horizontalGravity or verticalGravity
         binding.dateTimeLayout.gravity = horizontalGravity
-        binding.homeApp1.gravity = horizontalGravity
-        binding.homeApp2.gravity = horizontalGravity
-        binding.homeApp3.gravity = horizontalGravity
-        binding.homeApp4.gravity = horizontalGravity
-        binding.homeApp5.gravity = horizontalGravity
-        binding.homeApp6.gravity = horizontalGravity
-        binding.homeApp7.gravity = horizontalGravity
-        binding.homeApp8.gravity = horizontalGravity
+        homeAppViews.forEach { it.gravity = horizontalGravity or Gravity.CENTER_VERTICAL }
     }
 
     private fun populateDateTime() {
@@ -600,70 +578,55 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
     }
 
     private fun populateHomeScreen(appCountUpdated: Boolean) {
-        if (appCountUpdated) hideHomeApps()
+        hideHomeApps()
         populateDateTime()
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) populateScreenTime()
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q)
-            populateScreenTime()
-
-        val homeAppsNum = if (recentsOn) prefs.homeAppsNum.coerceAtMost(4) else prefs.homeAppsNum
+        val homeAppsNum = prefs.homeAppsNum.coerceIn(0, Constants.MAX_HOME_APPS)
+        configureHomeGrid(homeAppsNum)
         if (recentsOn) populateRecentApps()
-        if (homeAppsNum == 0) return
-
-        binding.homeApp1.visibility = View.VISIBLE
-        if (!setHomeAppText(binding.homeApp1, prefs.appName1, prefs.appPackage1, prefs.appUser1, prefs.isShortcut1, prefs.shortcutId1)) {
-            prefs.appName1 = ""
-            prefs.appPackage1 = ""
+        val pinnedCount = if (recentsOn) homeAppsNum.coerceAtMost(4) else homeAppsNum
+        homeAppViews.take(pinnedCount).forEachIndexed { index, slot ->
+            val position = index + 1
+            slot.visibility = View.VISIBLE
+            slot.alpha = 1f
+            if (!setHomeAppText(slot, prefs.getAppName(position), prefs.getAppPackage(position),
+                    prefs.getAppUser(position), prefs.getIsShortcut(position), prefs.getShortcutId(position))) {
+                prefs.clearHomeApp(position)
+            }
         }
-        if (homeAppsNum == 1) return
+    }
 
-        binding.homeApp2.visibility = View.VISIBLE
-        if (!setHomeAppText(binding.homeApp2, prefs.appName2, prefs.appPackage2, prefs.appUser2, prefs.isShortcut2, prefs.shortcutId2)) {
-            prefs.appName2 = ""
-            prefs.appPackage2 = ""
+    private fun configureHomeGrid(appCount: Int) {
+        val slots = homeAppViews
+        val columns = listOf(binding.homeAppColumn1, binding.homeAppColumn2, binding.homeAppColumn3)
+        columns.forEach { it.removeAllViews() }
+        slots.forEachIndexed { index, slot ->
+            // Preserve the optional recents feature's original four pinned + four recent apps.
+            val column = if (recentsOn) index / 4 else index / Constants.HOME_APP_ROWS
+            if (column < columns.size) columns[column].addView(slot)
         }
-        if (homeAppsNum == 2) return
+        // Reset order first; populateRecentApps moves the pinned column when requested.
+        binding.homeAppsGrid.removeAllViews()
+        columns.forEachIndexed { index, column ->
+            column.isVisible = !recentsOn || index < 2
+            binding.homeAppsGrid.addView(column)
+        }
 
-        binding.homeApp3.visibility = View.VISIBLE
-        if (!setHomeAppText(binding.homeApp3, prefs.appName3, prefs.appPackage3, prefs.appUser3, prefs.isShortcut3, prefs.shortcutId3)) {
-            prefs.appName3 = ""
-            prefs.appPackage3 = ""
+        val basePadding = resources.getDimensionPixelSize(R.dimen.home_app_padding_vertical)
+        val fiveRows = !recentsOn && appCount > 4
+        val metrics = slots.first().paint.fontMetricsInt
+        val textHeight = metrics.bottom - metrics.top
+        // Reuse the old bottom gap for row five: 4 rows + 56dp == 5 rows + 8dp.
+        // This keeps the scratchpad/app boundary and typography unchanged (within rounding).
+        val rowHeight = HomeGridSizing.rowHeight(textHeight, basePadding, 48.dpToPx())
+        slots.forEach { slot ->
+            slot.updatePadding(top = if (fiveRows) 0 else basePadding, bottom = if (fiveRows) 0 else basePadding)
+            slot.layoutParams = (slot.layoutParams as LinearLayout.LayoutParams).apply {
+                height = if (fiveRows) rowHeight else ViewGroup.LayoutParams.WRAP_CONTENT
+            }
         }
-        if (homeAppsNum == 3) return
-
-        binding.homeApp4.visibility = View.VISIBLE
-        if (!setHomeAppText(binding.homeApp4, prefs.appName4, prefs.appPackage4, prefs.appUser4, prefs.isShortcut4, prefs.shortcutId4)) {
-            prefs.appName4 = ""
-            prefs.appPackage4 = ""
-        }
-        if (homeAppsNum == 4) return
-
-        binding.homeApp5.visibility = View.VISIBLE
-        if (!setHomeAppText(binding.homeApp5, prefs.appName5, prefs.appPackage5, prefs.appUser5, prefs.isShortcut5, prefs.shortcutId5)) {
-            prefs.appName5 = ""
-            prefs.appPackage5 = ""
-        }
-        if (homeAppsNum == 5) return
-
-        binding.homeApp6.visibility = View.VISIBLE
-        if (!setHomeAppText(binding.homeApp6, prefs.appName6, prefs.appPackage6, prefs.appUser6, prefs.isShortcut6, prefs.shortcutId6)) {
-            prefs.appName6 = ""
-            prefs.appPackage6 = ""
-        }
-        if (homeAppsNum == 6) return
-
-        binding.homeApp7.visibility = View.VISIBLE
-        if (!setHomeAppText(binding.homeApp7, prefs.appName7, prefs.appPackage7, prefs.appUser7, prefs.isShortcut7, prefs.shortcutId7)) {
-            prefs.appName7 = ""
-            prefs.appPackage7 = ""
-        }
-        if (homeAppsNum == 7) return
-
-        binding.homeApp8.visibility = View.VISIBLE
-        if (!setHomeAppText(binding.homeApp8, prefs.appName8, prefs.appPackage8, prefs.appUser8, prefs.isShortcut8, prefs.shortcutId8)) {
-            prefs.appName8 = ""
-            prefs.appPackage8 = ""
-        }
+        binding.homeAppsLayout.updatePadding(bottom = (if (fiveRows) 8 else 56).dpToPx())
     }
 
     private fun setHomeAppText(
@@ -713,7 +676,7 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
         // Regular app check
         if (isPackageInstalled(requireContext(), packageName, userString)) {
             textView.text = appName
-            // ponytail: icons load on the main thread each resume; fine for <=8 apps, cache if it ever stutters.
+            // ponytail: icons load on the main thread each resume; fine for <=15 apps, cache if it ever stutters.
             if (prefs.showAppIcons) textView.setLeadingIcon(runCatching { launcherApps.getActivityList(packageName, userHandle).firstOrNull()?.getBadgedIcon(0) }.getOrNull())
             return true
         }
@@ -758,14 +721,7 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
     }
 
     private fun hideHomeApps() {
-        binding.homeApp1.visibility = View.GONE
-        binding.homeApp2.visibility = View.GONE
-        binding.homeApp3.visibility = View.GONE
-        binding.homeApp4.visibility = View.GONE
-        binding.homeApp5.visibility = View.GONE
-        binding.homeApp6.visibility = View.GONE
-        binding.homeApp7.visibility = View.GONE
-        binding.homeApp8.visibility = View.GONE
+        homeAppViews.forEach { it.visibility = View.GONE }
     }
 
     private fun launchAppOrShortcut(
